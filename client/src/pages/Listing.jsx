@@ -26,6 +26,7 @@ export default function Listing() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [appointmentBooked, setAppointmentBooked] = useState(false);
+  const [bookedDate, setBookedDate] = useState(null);
   const params = useParams();
   const { currentUser } = useSelector((state) => state.user);
 
@@ -115,6 +116,7 @@ export default function Listing() {
           const jsonRes = await validateRes.json();
           console.log(jsonRes);
           if (jsonRes.msg === "success") {
+            setBookedDate(selectedDate);
             setIsPaid(true);
             setShowCalendar(false);
             setSelectedDate(null);
@@ -267,20 +269,31 @@ export default function Listing() {
                 >
                   Contact landlord
                 </button>
-                <button
-                  onClick={() => setShowCalendar(true)}
-                  className={`bg-slate-700 text-white rounded-lg uppercase p-3 ${
-                    appointmentBooked ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-95'
-                  }`}
-                  disabled={appointmentBooked}
-                >
-                  {appointmentBooked ? 'Visit confirmed' : 'Book a visit'}
-                </button>
+                {appointmentBooked ? (
+                  <button
+                    onClick={() => {
+                      setAppointmentBooked(false);
+                      setBookedDate(null);
+                      setIsPaid(false);
+                      setShowCalendar(true);
+                    }}
+                    className='bg-red-600 text-white rounded-lg uppercase hover:opacity-95 p-3'
+                  >
+                    Cancel Appointment
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowCalendar(true)}
+                    className='bg-slate-700 text-white rounded-lg uppercase hover:opacity-95 p-3'
+                  >
+                    Book a visit
+                  </button>
+                )}
               </>
             )}
             {appointmentBooked && (
               <p className='text-green-600 font-semibold mt-4'>
-                Appointment is booked!
+                Appointment is booked on {bookedDate?.toLocaleDateString()}!
               </p>
             )}
             {showCalendar && (
