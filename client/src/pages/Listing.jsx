@@ -13,6 +13,8 @@ import {
   FaShare,
 } from 'react-icons/fa';
 import Contact from '../components/Contact';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 export default function Listing() {
   const [listing, setListing] = useState(null);
@@ -20,9 +22,20 @@ export default function Listing() {
   const [error, setError] = useState(false);
   const [copied, setCopied] = useState(false);
   const [contact, setContact] = useState(false);
-  const [isPaid, setIsPaid] = useState(false); // Tracks payment success
+  const [isPaid, setIsPaid] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [appointmentBooked, setAppointmentBooked] = useState(false);
   const params = useParams();
   const { currentUser } = useSelector((state) => state.user);
+
+  const availableDates = [
+    new Date(2025, 3, 20),
+    new Date(2025, 3, 21),
+    new Date(2025, 3, 22),
+    new Date(2025, 3, 25),
+    new Date(2025, 3, 26),
+  ];
 
   useEffect(() => {
     const fetchListing = async () => {
@@ -49,22 +62,15 @@ export default function Listing() {
   const paymentHandler = async (e) => {
     e.preventDefault();
 
-    const amount = 500 * 100; // ₹500 in paise
+    const amount = 500 * 100;
     const currency = "INR";
     const receiptId = "qwsaq1";
 
     try {
-      // Step 1: Create order
       const response = await fetch("/api/order", {
         method: "POST",
-        body: JSON.stringify({
-          amount,
-          currency,
-          receipt: receiptId,
-        }),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        body: JSON.stringify({ amount, currency, receipt: receiptId }),
+        headers: { "Content-Type": "application/json" },
       });
 
       if (!response.ok) {
@@ -74,15 +80,13 @@ export default function Listing() {
       }
 
       const order = await response.json();
-
       if (!order.id) {
         console.error("No order ID in response");
         return;
       }
 
-      // Step 2: Open Razorpay checkout
       const options = {
-        key: "rzp_test_qKDmABQedmUB76", // Matches server-side key_id
+        key: "rzp_test_qKDmABQedmUB76",
         amount,
         currency,
         name: "Acme Corp",
@@ -90,7 +94,6 @@ export default function Listing() {
         image: "https://example.com/your_logo",
         order_id: order.id,
         handler: async function (response) {
-          // Step 3: Validate payment
           const body = {
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
@@ -100,9 +103,7 @@ export default function Listing() {
           const validateRes = await fetch("/api/order/validate", {
             method: "POST",
             body: JSON.stringify(body),
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
           });
 
           if (!validateRes.ok) {
@@ -112,11 +113,12 @@ export default function Listing() {
           }
 
           const jsonRes = await validateRes.json();
-
-          // Step 4: Update state on success
           console.log(jsonRes);
           if (jsonRes.msg === "success") {
-            setIsPaid(true); // Set isPaid to true after successful validation
+            setIsPaid(true);
+            setShowCalendar(false);
+            setSelectedDate(null);
+            setAppointmentBooked(true);
             console.log("Payment successful, isPaid set to true");
           }
         },
@@ -125,23 +127,17 @@ export default function Listing() {
           email: "webdevmatrix@example.com",
           contact: "9000000000",
         },
-        notes: {
-          address: "Razorpay Corporate Office",
-        },
-        theme: {
-          color: "#3399cc",
-        },
+        notes: { address: "Razorpay Corporate Office" },
+        theme: { color: "#3399cc" },
       };
 
       if (!window.Razorpay) {
-        console.error("Razorpay script not loaded!");
         alert("Payment gateway not available. Please try again later.");
         return;
       }
 
       const rzp1 = new window.Razorpay(options);
       rzp1.on("payment.failed", function (response) {
-        console.error("Payment failed:", response.error);
         alert(response.error.description);
       });
       rzp1.open();
@@ -150,24 +146,38 @@ export default function Listing() {
     }
   };
 
+  const isVideoUrl = (url) => url.match(/\.(mp4|webm|ogg|mov|avi|mkv)$/i);
+
   return (
     <main>
       {loading && <p className='text-center my-7 text-2xl'>Loading...</p>}
-      {error && (
-        <p className='text-center my-7 text-2xl'>Something went wrong!</p>
-      )}
+      {error && <p className='text-center my-7 text-2xl'>Something went wrong!</p>}
       {listing && !loading && !error && (
         <div>
           <Swiper navigation={true} modules={[Navigation]}>
             {listing.imageUrls.map((url) => (
               <SwiperSlide key={url}>
-                <div
-                  className='h-[550px]'
-                  style={{
-                    background: `url(${url}) center no-repeat`,
-                    backgroundSize: 'cover',
-                  }}
-                ></div>
+                {isVideoUrl(url) ? (
+                  <video
+                    src={url}
+                    controls
+                    playsInline
+                    muted
+                    className='h-[550px] w-full object-cover'
+                    onError={(e) => console.error(`Video failed to load: ${url}`, e)}
+                  >
+                    Your browser does not support the video tag.
+                    <a href={url} target='_blank' rel='noopener noreferrer'>View video</a>.
+                  </video>
+                ) : (
+                  <div
+                    className='h-[550px]'
+                    style={{
+                      background: `url(${url}) center no-repeat`,
+                      backgroundSize: 'cover',
+                    }}
+                  ></div>
+                )}
               </SwiperSlide>
             ))}
           </Swiper>
@@ -177,9 +187,7 @@ export default function Listing() {
               onClick={() => {
                 navigator.clipboard.writeText(window.location.href);
                 setCopied(true);
-                setTimeout(() => {
-                  setCopied(false);
-                }, 2000);
+                setTimeout(() => setCopied(false), 2000);
               }}
             />
           </div>
@@ -200,6 +208,21 @@ export default function Listing() {
               <FaMapMarkerAlt className='text-green-700' />
               {listing.address}
             </p>
+            {listing.mapUrl && (
+              <div className='mt-6'>
+                <h2 className='text-lg font-semibold'>Location</h2>
+                <iframe
+                  src={listing.mapUrl}
+                  width='100%'
+                  height='450'
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading='lazy'
+                  referrerPolicy='no-referrer-when-downgrade'
+                  title='Property Location'
+                ></iframe>
+              </div>
+            )}
             <div className='flex gap-4'>
               <p className='bg-red-900 w-full max-w-[200px] text-white text-center p-1 rounded-md'>
                 {listing.type === 'rent' ? 'For Rent' : 'For Sale'}
@@ -245,15 +268,56 @@ export default function Listing() {
                   Contact landlord
                 </button>
                 <button
-                  onClick={!isPaid ? paymentHandler : undefined} // Only clickable if not paid
+                  onClick={() => setShowCalendar(true)}
                   className={`bg-slate-700 text-white rounded-lg uppercase p-3 ${
-                    isPaid ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-95'
+                    appointmentBooked ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-95'
                   }`}
-                  disabled={isPaid} // Disable button after payment
+                  disabled={appointmentBooked}
                 >
-                  {isPaid ? 'Visit confirmed' : 'Book a visit'} {/* Text changes based on isPaid */}
+                  {appointmentBooked ? 'Visit confirmed' : 'Book a visit'}
                 </button>
               </>
+            )}
+            {appointmentBooked && (
+              <p className='text-green-600 font-semibold mt-4'>
+                Appointment is booked!
+              </p>
+            )}
+            {showCalendar && (
+              <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+                <div className='bg-white p-6 rounded-lg shadow-lg'>
+                  <h2 className='text-lg font-semibold mb-4'>Select Appointment Date</h2>
+                  <DatePicker
+                    selected={selectedDate}
+                    onChange={(date) => setSelectedDate(date)}
+                    includeDates={availableDates}
+                    inline
+                    minDate={new Date()}
+                    className='mb-4'
+                  />
+                  {appointmentBooked ? (
+                    <p className='text-green-600 font-semibold mt-4'>Appointment booked!</p>
+                  ) : (
+                    selectedDate && (
+                      <button
+                        onClick={paymentHandler}
+                        className='bg-green-600 text-white rounded-lg uppercase hover:opacity-95 p-2 w-full mt-4'
+                      >
+                        Pay
+                      </button>
+                    )
+                  )}
+                  <button
+                    onClick={() => {
+                      setShowCalendar(false);
+                      setSelectedDate(null);
+                    }}
+                    className='bg-red-600 text-white rounded-lg uppercase hover:opacity-95 p-2 w-full mt-2'
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
             )}
             {contact && <Contact listing={listing} />}
           </div>

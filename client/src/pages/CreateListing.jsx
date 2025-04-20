@@ -1,11 +1,4 @@
 import { useState } from 'react';
-import {
-  getDownloadURL,
-  getStorage,
-  ref,
-  uploadBytesResumable,
-} from 'firebase/storage';
-import { app } from '../firebase';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 
@@ -26,20 +19,22 @@ export default function CreateListing() {
     offer: false,
     parking: false,
     furnished: false,
+    mapUrl: '', // Added mapUrl to match schema
   });
-  const [imageUploadError, setImageUploadError] = useState(false);
+  const [mediaUploadError, setMediaUploadError] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({});
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
-  console.log(formData);
-  const handleImageSubmit = (e) => {
+
+  const handleMediaSubmit = (e) => {
     if (files.length > 0 && files.length + formData.imageUrls.length < 7) {
       setUploading(true);
-      setImageUploadError(false);
+      setMediaUploadError(false);
       const promises = [];
 
       for (let i = 0; i < files.length; i++) {
-        promises.push(storeImage(files[i]));
+        promises.push(storeMedia(files[i], i));
       }
       Promise.all(promises)
         .then((urls) => {
@@ -47,45 +42,60 @@ export default function CreateListing() {
             ...formData,
             imageUrls: formData.imageUrls.concat(urls),
           });
-          setImageUploadError(false);
+          setMediaUploadError(false);
           setUploading(false);
+          setUploadProgress({});
         })
         .catch((err) => {
-          setImageUploadError('Image upload failed (2 mb max per image)');
+          setMediaUploadError('Media upload failed (2 MB max for images, 100 MB max for videos)');
           setUploading(false);
+          setUploadProgress({});
         });
     } else {
-      setImageUploadError('You can only upload 6 images per listing');
+      setMediaUploadError('You can only upload 6 media files per listing');
       setUploading(false);
     }
   };
 
-  const storeImage = async (file) => {
+  const storeMedia = async (file, index) => {
     return new Promise((resolve, reject) => {
-      const storage = getStorage(app);
-      const fileName = new Date().getTime() + file.name;
-      const storageRef = ref(storage, fileName);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress =
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          console.log(`Upload is ${progress}% done`);
-        },
-        (error) => {
-          reject(error);
-        },
-        () => {
-          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-            resolve(downloadURL);
-          });
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', 'sahadEstate');
+      formData.append('cloud_name', 'dqayn0zvu');
+
+      const isVideo = file.type.startsWith('video/');
+      const resourceType = isVideo ? 'video' : 'image';
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `https://api.cloudinary.com/v1_1/dqayn0zvu/${resourceType}/upload`, true);
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const progress = Math.round((event.loaded / event.total) * 100);
+          setUploadProgress((prev) => ({ ...prev, [index]: progress }));
         }
-      );
+      };
+
+      xhr.onload = () => {
+        const data = JSON.parse(xhr.responseText);
+        console.log('Cloudinary response:', data);
+        if (data.secure_url) {
+          resolve(data.secure_url);
+        } else {
+          reject(new Error('Upload failed'));
+        }
+      };
+
+      xhr.onerror = () => {
+        reject(new Error('Upload failed'));
+      };
+
+      xhr.send(formData);
     });
   };
 
-  const handleRemoveImage = (index) => {
+  const handleRemoveMedia = (index) => {
     setFormData({
       ...formData,
       imageUrls: formData.imageUrls.filter((_, i) => i !== index),
@@ -98,9 +108,7 @@ export default function CreateListing() {
         ...formData,
         type: e.target.id,
       });
-    }
-
-    if (
+    } else if (
       e.target.id === 'parking' ||
       e.target.id === 'furnished' ||
       e.target.id === 'offer'
@@ -109,55 +117,81 @@ export default function CreateListing() {
         ...formData,
         [e.target.id]: e.target.checked,
       });
-    }
-
-    if (
+    } else if (
       e.target.type === 'number' ||
       e.target.type === 'text' ||
       e.target.type === 'textarea'
     ) {
       setFormData({
         ...formData,
-        [e.target.id]: e.target.value,
+        [e.target.id]: e.target.type === 'number' ? parseFloat(e.target.value) : e.target.value,
       });
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('handleSubmit started, formData:', formData);
     try {
-      if (formData.imageUrls.length < 1)
-        return setError('You must upload at least one image');
-      if (+formData.regularPrice < +formData.discountPrice)
-        return setError('Discount price must be lower than regular price');
+      // Validate required fields
+      if (formData.imageUrls.length < 1) {
+        console.log('Validation failed: No media files');
+        setError('You must upload at least one media file');
+        return;
+      }
+      if (formData.offer && +formData.regularPrice < +formData.discountPrice) {
+        console.log('Validation failed: Discount price issue');
+        setError('Discount price must be lower than regular price');
+        return;
+      }
+      if (!formData.name || !formData.description || !formData.address) {
+        console.log('Validation failed: Missing required text fields');
+        setError('Please fill in all required fields (name, description, address)');
+        return;
+      }
+
       setLoading(true);
       setError(false);
+      console.log('Sending request to /api/listing/create with data:', {
+        ...formData,
+        userRef: currentUser._id,
+      });
       const res = await fetch('/api/listing/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
           ...formData,
           userRef: currentUser._id,
         }),
       });
+      console.log('Response received:', res.status);
       const data = await res.json();
+      console.log('Response data:', data);
       setLoading(false);
       if (data.success === false) {
+        console.log('Backend error:', data.message);
         setError(data.message);
+        return;
       }
+      console.log('Navigating to /listing/', data._id);
       navigate(`/listing/${data._id}`);
     } catch (error) {
+      console.error('handleSubmit error:', error);
       setError(error.message);
       setLoading(false);
     }
   };
+
   return (
     <main className='p-3 max-w-4xl mx-auto'>
       <h1 className='text-3xl font-semibold text-center my-7'>
         Create a Listing
       </h1>
+      {loading && <p className='text-center my-7 text-2xl'>Creating listing...</p>}
+      {error && <p className='text-center my-7 text-2xl text-red-700'>{error}</p>}
       <form onSubmit={handleSubmit} className='flex flex-col sm:flex-row gap-4'>
         <div className='flex flex-col gap-4 flex-1'>
           <input
@@ -172,7 +206,6 @@ export default function CreateListing() {
             value={formData.name}
           />
           <textarea
-            type='text'
             placeholder='Description'
             className='border p-3 rounded-lg'
             id='description'
@@ -180,15 +213,27 @@ export default function CreateListing() {
             onChange={handleChange}
             value={formData.description}
           />
-          <input
-            type='text'
-            placeholder='Address'
-            className='border p-3 rounded-lg'
-            id='address'
-            required
-            onChange={handleChange}
-            value={formData.address}
-          />
+          <div className='flex flex-col gap-2'>
+            <input
+              type='text'
+              placeholder='Address'
+              className='border p-3 rounded-lg'
+              id='address'
+              required
+              onChange={handleChange}
+              value={formData.address}
+            />
+          </div>
+          <div className='flex flex-col gap-2'>
+            <input
+              type='text'
+              placeholder='Google Maps Embed URL (e.g., iframe src)'
+              className='border p-3 rounded-lg'
+              id='mapUrl'
+              onChange={handleChange}
+              value={formData.mapUrl}
+            />
+          </div>
           <div className='flex gap-6 flex-wrap'>
             <div className='flex gap-2'>
               <input
@@ -286,34 +331,31 @@ export default function CreateListing() {
                 )}
               </div>
             </div>
-            {formData.offer && (
-              <div className='flex items-center gap-2'>
-                <input
-                  type='number'
-                  id='discountPrice'
-                  min='0'
-                  max='10000000'
-                  required
-                  className='p-3 border border-gray-300 rounded-lg'
-                  onChange={handleChange}
-                  value={formData.discountPrice}
-                />
-                <div className='flex flex-col items-center'>
-                  <p>Discounted price</p>
-
-                  {formData.type === 'rent' && (
-                    <span className='text-xs'>($ / month)</span>
-                  )}
-                </div>
+            <div className='flex items-center gap-2'>
+              <input
+                type='number'
+                id='discountPrice'
+                min='0'
+                max='10000000'
+                required
+                className='p-3 border border-gray-300 rounded-lg'
+                onChange={handleChange}
+                value={formData.discountPrice}
+              />
+              <div className='flex flex-col items-center'>
+                <p>Discounted price</p>
+                {formData.type === 'rent' && (
+                  <span className='text-xs'>($ / month)</span>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
         <div className='flex flex-col flex-1 gap-4'>
           <p className='font-semibold'>
-            Images:
+            Media:
             <span className='font-normal text-gray-600 ml-2'>
-              The first image will be the cover (max 6)
+              The first media will be the cover (max 6, images or videos)
             </span>
           </p>
           <div className='flex gap-4'>
@@ -321,21 +363,21 @@ export default function CreateListing() {
               onChange={(e) => setFiles(e.target.files)}
               className='p-3 border border-gray-300 rounded w-full'
               type='file'
-              id='images'
-              accept='image/*'
+              id='media'
+              accept='image/*,video/*'
               multiple
             />
             <button
               type='button'
               disabled={uploading}
-              onClick={handleImageSubmit}
+              onClick={handleMediaSubmit}
               className='p-3 text-green-700 border border-green-700 rounded uppercase hover:shadow-lg disabled:opacity-80'
             >
               {uploading ? 'Uploading...' : 'Upload'}
             </button>
           </div>
           <p className='text-red-700 text-sm'>
-            {imageUploadError && imageUploadError}
+            {mediaUploadError && mediaUploadError}
           </p>
           {formData.imageUrls.length > 0 &&
             formData.imageUrls.map((url, index) => (
@@ -343,18 +385,36 @@ export default function CreateListing() {
                 key={url}
                 className='flex justify-between p-3 border items-center'
               >
-                <img
-                  src={url}
-                  alt='listing image'
-                  className='w-20 h-20 object-contain rounded-lg'
-                />
-                <button
-                  type='button'
-                  onClick={() => handleRemoveImage(index)}
-                  className='p-3 text-red-700 rounded-lg uppercase hover:opacity-75'
-                >
-                  Delete
-                </button>
+                {url.match(/\.(mp4|webm|ogg|mov|avi|mkv)$/i) ? (
+                  <video
+                    src={url}
+                    controls
+                    className='w-20 h-20 object-contain rounded-lg'
+                    onError={(e) => {
+                      console.error(`Preview video failed to load: ${url}`, e);
+                    }}
+                  />
+                ) : (
+                  <img
+                    src={url}
+                    alt='listing media'
+                    className='w-20 h-20 object-contain rounded-lg'
+                  />
+                )}
+                <div className='flex flex-col items-end'>
+                  {uploadProgress[index] && (
+                    <span className='text-slate-700 text-xs'>
+                      {`Uploading ${uploadProgress[index]}%`}
+                    </span>
+                  )}
+                  <button
+                    type='button'
+                    onClick={() => handleRemoveMedia(index)}
+                    className='p-3 text-red-700 rounded-lg uppercase hover:opacity-75'
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           <button

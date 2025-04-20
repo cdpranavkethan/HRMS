@@ -54,6 +54,10 @@ const listingSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    mapUrl: {
+      type: String,
+      required: false, // Optional field
+    },
   },
   { timestamps: true }
 );

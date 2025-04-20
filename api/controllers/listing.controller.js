@@ -3,10 +3,69 @@ import { errorHandler } from '../utils/error.js';
 
 export const createListing = async (req, res, next) => {
   try {
-    const listing = await Listing.create(req.body);
-    return res.status(201).json(listing);
+    console.log('Received createListing request:', req.body); // Debug: Log incoming data
+    const {
+      imageUrls,
+      name,
+      description,
+      address,
+      type,
+      bedrooms,
+      bathrooms,
+      regularPrice,
+      discountPrice,
+      offer,
+      parking,
+      furnished,
+      userRef,
+      mapUrl, // Added mapUrl
+    } = req.body;
+
+    // Validate required fields
+    if (!imageUrls || imageUrls.length === 0) {
+      console.log('Validation failed: No media files');
+      return res.status(400).json({ success: false, message: 'At least one media file is required' });
+    }
+    if (!name || !description || !address || !type || !bedrooms || !bathrooms || !regularPrice || discountPrice === undefined) {
+      console.log('Validation failed: Missing required fields');
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+    if (offer && Number(regularPrice) < Number(discountPrice)) {
+      console.log('Validation failed: Discount price issue');
+      return res.status(400).json({ success: false, message: 'Discount price must be lower than regular price' });
+    }
+    // Optional: Validate mapUrl format
+    if (mapUrl && !mapUrl.startsWith('https://www.google.com/maps/embed')) {
+      console.log('Validation failed: Invalid map URL');
+      return res.status(400).json({ success: false, message: 'Invalid map URL' });
+    }
+
+    // Create new listing
+    const newListing = new Listing({
+      imageUrls,
+      name,
+      description,
+      address,
+      type,
+      bedrooms,
+      bathrooms,
+      regularPrice,
+      discountPrice,
+      offer,
+      parking,
+      furnished,
+      userRef,
+      mapUrl, // Added mapUrl
+    });
+
+    // Save to MongoDB
+    const savedListing = await newListing.save();
+    console.log('Listing saved:', savedListing); // Debug: Log saved listing
+
+    res.status(201).json(savedListing);
   } catch (error) {
-    next(error);
+    console.error('createListing error:', error); // Debug: Log errors
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -39,11 +98,58 @@ export const updateListing = async (req, res, next) => {
   }
 
   try {
+    const {
+      imageUrls,
+      name,
+      description,
+      address,
+      type,
+      bedrooms,
+      bathrooms,
+      regularPrice,
+      discountPrice,
+      offer,
+      parking,
+      furnished,
+      mapUrl, // Added mapUrl
+    } = req.body;
+
+    // Validate required fields
+    if (!imageUrls || imageUrls.length === 0) {
+      return next(errorHandler(400, 'At least one media file is required'));
+    }
+    if (!name || !description || !address || !type || !bedrooms || !bathrooms || !regularPrice || discountPrice === undefined) {
+      return next(errorHandler(400, 'Missing required fields'));
+    }
+    if (offer && Number(regularPrice) < Number(discountPrice)) {
+      return next(errorHandler(400, 'Discount price must be lower than regular price'));
+    }
+    if (mapUrl && !mapUrl.startsWith('https://www.google.com/maps/embed')) {
+      return next(errorHandler(400, 'Invalid map URL'));
+    }
+
     const updatedListing = await Listing.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      {
+        $set: {
+          imageUrls,
+          name,
+          description,
+          address,
+          type,
+          bedrooms,
+          bathrooms,
+          regularPrice,
+          discountPrice,
+          offer,
+          parking,
+          furnished,
+          mapUrl, // Added mapUrl
+        },
+      },
       { new: true }
     );
+
     res.status(200).json(updatedListing);
   } catch (error) {
     next(error);
