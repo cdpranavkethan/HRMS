@@ -10,6 +10,7 @@ import CreateListing from './pages/CreateListing';
 import UpdateListing from './pages/UpdateListing';
 import Listing from './pages/Listing';
 import Search from './pages/Search';
+import Hostels from './pages/Hostels';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
       <Header />
       <Routes>
         <Route path='/' element={<Home />} />
+        <Route path='/hostels' element={<Hostels />} />
         <Route path='/sign-in' element={<SignIn />} />
         <Route path='/sign-up' element={<SignUp />} />
         <Route path='/about' element={<About />} />

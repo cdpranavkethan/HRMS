@@ -12,7 +12,8 @@ import { createHmac } from 'crypto';
 dotenv.config();
 
 //const mongoURI = 'mongodb+srv://binarywaveeyes:E733EsrYwhBvM741@test-project.s4jb5.mongodb.net/?retryWrites=true&w=majority&appName=test-projectmongodb://127.0.0.1:27017/merndatabase';
-const mongoURI = 'mongodb://127.0.0.1:27017/merndatabase';
+const mongoURI = 'mongodb://127.0.0.1:27017/merndatabase1';
+//const mongoURI = 'mongodb+srv://sahithikandimalla:Sahithi05@cluster0.5rflcms.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 mongoose
   .connect(mongoURI)
   .then(() => {
