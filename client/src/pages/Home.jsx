@@ -15,9 +15,10 @@ export default function Home() {
   useEffect(() => {
     const fetchOfferListings = async () => {
       try {
-        const res = await fetch('/api/listing/get?offer=true&limit=4');
+        const res = await fetch('/api/listing/get?offer=true&forStudents=false&limit=4');
         const data = await res.json();
-        setOfferListings(data);
+        const nonStudentListings = data.filter(listing => !listing.forStudents);
+        setOfferListings(nonStudentListings);
         fetchRentListings();
       } catch (error) {
         console.log(error);
@@ -25,9 +26,10 @@ export default function Home() {
     };
     const fetchRentListings = async () => {
       try {
-        const res = await fetch('/api/listing/get?type=rent&limit=4');
+        const res = await fetch('/api/listing/get?type=rent&forStudents=false&limit=4');
         const data = await res.json();
-        setRentListings(data);
+        const nonStudentListings = data.filter(listing => !listing.forStudents);
+        setRentListings(nonStudentListings);
         fetchSaleListings();
       } catch (error) {
         console.log(error);
@@ -36,9 +38,10 @@ export default function Home() {
 
     const fetchSaleListings = async () => {
       try {
-        const res = await fetch('/api/listing/get?type=sale&limit=4');
+        const res = await fetch('/api/listing/get?type=sale&forStudents=false&limit=4');
         const data = await res.json();
-        setSaleListings(data);
+        const nonStudentListings = data.filter(listing => !listing.forStudents);
+        setSaleListings(nonStudentListings);
       } catch (error) {
         log(error);
       }
@@ -73,14 +76,13 @@ export default function Home() {
         {offerListings &&
           offerListings.length > 0 &&
           offerListings.map((listing) => (
-            <SwiperSlide>
+            <SwiperSlide key={listing._id}>
               <div
                 style={{
                   background: `url(${listing.imageUrls[0]}) center no-repeat`,
                   backgroundSize: 'cover',
                 }}
                 className='h-[500px]'
-                key={listing._id}
               ></div>
             </SwiperSlide>
           ))}
@@ -93,7 +95,7 @@ export default function Home() {
           <div className=''>
             <div className='my-3'>
               <h2 className='text-2xl font-semibold text-slate-600'>Recent offers</h2>
-              <Link className='text-sm text-blue-800 hover:underline' to={'/search?offer=true'}>Show more offers</Link>
+              <Link className='text-sm text-blue-800 hover:underline' to={'/search?offer=true&forStudents=false'}>Show more offers</Link>
             </div>
             <div className='flex flex-wrap gap-4'>
               {offerListings.map((listing) => (
@@ -106,7 +108,7 @@ export default function Home() {
           <div className=''>
             <div className='my-3'>
               <h2 className='text-2xl font-semibold text-slate-600'>Recent places for rent</h2>
-              <Link className='text-sm text-blue-800 hover:underline' to={'/search?type=rent'}>Show more places for rent</Link>
+              <Link className='text-sm text-blue-800 hover:underline' to={'/search?type=rent&forStudents=false'}>Show more places for rent</Link>
             </div>
             <div className='flex flex-wrap gap-4'>
               {rentListings.map((listing) => (
@@ -119,7 +121,7 @@ export default function Home() {
           <div className=''>
             <div className='my-3'>
               <h2 className='text-2xl font-semibold text-slate-600'>Recent places for sale</h2>
-              <Link className='text-sm text-blue-800 hover:underline' to={'/search?type=sale'}>Show more places for sale</Link>
+              <Link className='text-sm text-blue-800 hover:underline' to={'/search?type=sale&forStudents=false'}>Show more places for sale</Link>
             </div>
             <div className='flex flex-wrap gap-4'>
               {saleListings.map((listing) => (
