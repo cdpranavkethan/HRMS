@@ -58,6 +58,11 @@ const listingSchema = new mongoose.Schema(
       type: String,
       required: false, // Optional field
     },
+    forStudents: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
   },
   { timestamps: true }
 );

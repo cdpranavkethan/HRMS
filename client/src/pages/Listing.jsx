@@ -11,6 +11,7 @@ import {
   FaMapMarkerAlt,
   FaParking,
   FaShare,
+  FaGraduationCap,
 } from 'react-icons/fa';
 import Contact from '../components/Contact';
 import DatePicker from 'react-datepicker';
@@ -259,6 +260,10 @@ export default function Listing() {
               <li className='flex items-center gap-1 whitespace-nowrap'>
                 <FaChair className='text-lg' />
                 {listing.furnished ? 'Furnished' : 'Unfurnished'}
+              </li>
+              <li className='flex items-center gap-1 whitespace-nowrap'>
+                <FaGraduationCap className='text-lg' />
+                {listing.forStudents ? 'Student Friendly' : 'Not For Students'}
               </li>
             </ul>
             {currentUser && listing.userRef !== currentUser._id && (

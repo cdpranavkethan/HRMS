@@ -19,6 +19,7 @@ export const createListing = async (req, res, next) => {
       furnished,
       userRef,
       mapUrl, // Added mapUrl
+      forStudents, // Added forStudents
     } = req.body;
 
     // Validate required fields
@@ -56,6 +57,7 @@ export const createListing = async (req, res, next) => {
       furnished,
       userRef,
       mapUrl, // Added mapUrl
+      forStudents, // Added forStudents
     });
 
     // Save to MongoDB
@@ -112,6 +114,7 @@ export const updateListing = async (req, res, next) => {
       parking,
       furnished,
       mapUrl, // Added mapUrl
+      forStudents, // Added forStudents
     } = req.body;
 
     // Validate required fields
@@ -145,6 +148,7 @@ export const updateListing = async (req, res, next) => {
           parking,
           furnished,
           mapUrl, // Added mapUrl
+          forStudents, // Added forStudents
         },
       },
       { new: true }

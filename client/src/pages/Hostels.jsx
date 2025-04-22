@@ -7,110 +7,85 @@ import 'swiper/css/bundle';
 import ListingItem from '../components/ListingItem';
 
 export default function Hostels() {
-  const [offerListings, setOfferListings] = useState([]);
-  const [saleListings, setSaleListings] = useState([]);
-  const [rentListings, setRentListings] = useState([]);
+  const [studentListings, setStudentListings] = useState([]);
+  const [loading, setLoading] = useState(false);
   SwiperCore.use([Navigation]);
 
   useEffect(() => {
-    const fetchOfferListings = async () => {
+    const fetchStudentListings = async () => {
       try {
-        const res = await fetch('/api/listing/get?offer=true&limit=4');
+        setLoading(true);
+        const res = await fetch('/api/listing/get?forStudents=true');
         const data = await res.json();
-        setOfferListings(data);
-        fetchRentListings();
+        const onlyStudentListings = data.filter(listing => listing.forStudents === true);
+        setStudentListings(onlyStudentListings);
+        setLoading(false);
       } catch (error) {
         console.log(error);
-      }
-    };
-    const fetchRentListings = async () => {
-      try {
-        const res = await fetch('/api/listing/get?type=rent&limit=4');
-        const data = await res.json();
-        setRentListings(data);
-        fetchSaleListings();
-      } catch (error) {
-        console.log(error);
+        setLoading(false);
       }
     };
 
-    const fetchSaleListings = async () => {
-      try {
-        const res = await fetch('/api/listing/get?type=sale&limit=4');
-        const data = await res.json();
-        setSaleListings(data);
-      } catch (error) {
-        log(error);
-      }
-    };
-    fetchOfferListings();
+    fetchStudentListings();
   }, []);
+
   return (
     <div>
       {/* top */}
       <div className='flex flex-col gap-6 p-28 px-3 max-w-6xl mx-auto'>
         <h1 className='text-slate-700 font-bold text-3xl lg:text-6xl'>
-        Find student-friendly <span className='text-slate-500'>hostels</span>
+          Find Your Perfect <span className='text-slate-500'>Student Hostel</span>
           <br />
           near your college
         </h1>
         <div className='text-gray-400 text-xs sm:text-sm'>
-        Our platform makes it easier for students to find safe, affordable, and convenient hostels.
-
+          Discover student-verified hostels with the amenities you need.
           <br />
-          Browse listings based on location, budget, and amenities to discover your ideal place to stay.
-
+          All listings here are specifically marked as student-friendly accommodations.
         </div>
         <Link
-          to={'/search'}
+          to={'/search?forStudents=true'}
           className='text-xs sm:text-sm text-blue-800 font-bold hover:underline'
         >
-          Let's get started...
+          Browse all student hostels...
         </Link>
       </div>
 
-      {/* swiper */}
-      <Swiper navigation>
-        {offerListings &&
-          offerListings.length > 0 &&
-          offerListings.map((listing) => (
-            <SwiperSlide>
-              <div
-                style={{
-                  background: `url(${listing.imageUrls[0]}) center no-repeat`,
-                  backgroundSize: 'cover',
-                }}
-                className='h-[500px]'
-                key={listing._id}
-              ></div>
-            </SwiperSlide>
-          ))}
-      </Swiper>
+      {/* Featured Hostels Swiper */}
+      {studentListings.length > 0 && (
+        <div className='mb-10'>
+          <Swiper navigation>
+            {studentListings.slice(0, 5).map((listing) => (
+              <SwiperSlide key={listing._id}>
+                <div
+                  style={{
+                    background: `url(${listing.imageUrls[0]}) center no-repeat`,
+                    backgroundSize: 'cover',
+                  }}
+                  className='h-[500px]'
+                ></div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </div>
+      )}
 
-      {/* listing results for offer, sale and rent */}
-
-      <div className='max-w-6xl mx-auto p-3 flex flex-col gap-8 my-10'>
-        {offerListings && offerListings.length > 0 && (
-          <div className=''>
+      {/* Student Hostel Listings */}
+      <div className='max-w-6xl mx-auto p-3'>
+        {loading ? (
+          <p className='text-center text-2xl mt-10'>Loading...</p>
+        ) : studentListings.length === 0 ? (
+          <p className='text-center text-2xl mt-10'>No student hostels available at the moment.</p>
+        ) : (
+          <div>
             <div className='my-3'>
-              <h2 className='text-2xl font-semibold text-slate-600'>Offers for college students</h2>
-              <Link className='text-sm text-blue-800 hover:underline' to={'/search?offer=true'}>Show more offers</Link>
+              <h2 className='text-2xl font-semibold text-slate-600'>Student-Friendly Hostels</h2>
+              <p className='text-sm text-slate-500 mt-2'>
+                Showing verified student accommodations only
+              </p>
             </div>
             <div className='flex flex-wrap gap-4'>
-              {offerListings.map((listing) => (
-                <ListingItem listing={listing} key={listing._id} />
-              ))}
-            </div>
-          </div>
-        )}
-        {rentListings && rentListings.length > 0 && (
-          <div className=''>
-            <div className='my-3'>
-              <h2 className='text-2xl font-semibold text-slate-600'>Recent places for rent</h2>
-              <Link className='text-sm text-blue-800 hover:underline' to={'/search?type=rent'}>Show more places for rent</Link>
-            </div>
-            <div className='flex flex-wrap gap-4'>
-              {rentListings.map((listing) => (
+              {studentListings.map((listing) => (
                 <ListingItem listing={listing} key={listing._id} />
               ))}
             </div>

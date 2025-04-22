@@ -19,6 +19,7 @@ export default function CreateListing() {
     offer: false,
     parking: false,
     furnished: false,
+    forStudents: false,
     mapUrl: '', // Added mapUrl to match schema
   });
   const [mediaUploadError, setMediaUploadError] = useState(false);
@@ -111,7 +112,8 @@ export default function CreateListing() {
     } else if (
       e.target.id === 'parking' ||
       e.target.id === 'furnished' ||
-      e.target.id === 'offer'
+      e.target.id === 'offer' ||
+      e.target.id === 'forStudents'
     ) {
       setFormData({
         ...formData,
@@ -348,6 +350,16 @@ export default function CreateListing() {
                   <span className='text-xs'>(₹ / month)</span>
                 )}
               </div>
+            </div>
+            <div className='flex items-center gap-2'>
+              <input
+                type='checkbox'
+                id='forStudents'
+                className='w-5 h-5'
+                onChange={handleChange}
+                checked={formData.forStudents}
+              />
+              <span className='text-lg'>For Students</span>
             </div>
           </div>
         </div>
