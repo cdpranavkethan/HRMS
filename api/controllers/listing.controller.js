@@ -18,8 +18,9 @@ export const createListing = async (req, res, next) => {
       parking,
       furnished,
       userRef,
-      mapUrl, // Added mapUrl
-      forStudents, // Added forStudents
+      mapUrl,
+      forStudents,
+      hostelType,
     } = req.body;
 
     // Validate required fields
@@ -41,8 +42,8 @@ export const createListing = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Invalid map URL' });
     }
 
-    // Create new listing
-    const newListing = new Listing({
+    // Create listing data object
+    const listingData = {
       imageUrls,
       name,
       description,
@@ -56,9 +57,20 @@ export const createListing = async (req, res, next) => {
       parking,
       furnished,
       userRef,
-      mapUrl, // Added mapUrl
-      forStudents, // Added forStudents
-    });
+      mapUrl,
+      forStudents,
+    };
+
+    // Only include hostelType if forStudents is true
+    if (forStudents) {
+      if (!hostelType) {
+        return res.status(400).json({ success: false, message: 'Hostel type is required for student listings' });
+      }
+      listingData.hostelType = hostelType;
+    }
+
+    // Create new listing
+    const newListing = new Listing(listingData);
 
     // Save to MongoDB
     const savedListing = await newListing.save();

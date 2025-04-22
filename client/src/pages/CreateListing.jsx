@@ -20,6 +20,7 @@ export default function CreateListing() {
     parking: false,
     furnished: false,
     forStudents: false,
+    hostelType: '',
     mapUrl: '', // Added mapUrl to match schema
   });
   const [mediaUploadError, setMediaUploadError] = useState(false);
@@ -112,12 +113,22 @@ export default function CreateListing() {
     } else if (
       e.target.id === 'parking' ||
       e.target.id === 'furnished' ||
-      e.target.id === 'offer' ||
-      e.target.id === 'forStudents'
+      e.target.id === 'offer'
     ) {
       setFormData({
         ...formData,
         [e.target.id]: e.target.checked,
+      });
+    } else if (e.target.id === 'forStudents') {
+      setFormData({
+        ...formData,
+        forStudents: e.target.checked,
+        hostelType: e.target.checked ? formData.hostelType : '',
+      });
+    } else if (e.target.id === 'hostelType') {
+      setFormData({
+        ...formData,
+        hostelType: e.target.value,
       });
     } else if (
       e.target.type === 'number' ||
@@ -151,23 +162,33 @@ export default function CreateListing() {
         setError('Please fill in all required fields (name, description, address)');
         return;
       }
+      if (formData.forStudents && !formData.hostelType) {
+        console.log('Validation failed: Missing hostel type');
+        setError('Please select a hostel type for student accommodation');
+        return;
+      }
 
       setLoading(true);
       setError(false);
-      console.log('Sending request to /api/listing/create with data:', {
+      const dataToSend = {
         ...formData,
         userRef: currentUser._id,
-      });
+      };
+      
+      // If not a student listing, don't send hostelType
+      if (!formData.forStudents) {
+        delete dataToSend.hostelType;
+      }
+
+      console.log('Sending request to /api/listing/create with data:', dataToSend);
+      
       const res = await fetch('/api/listing/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({
-          ...formData,
-          userRef: currentUser._id,
-        }),
+        body: JSON.stringify(dataToSend),
       });
       console.log('Response received:', res.status);
       const data = await res.json();
@@ -361,6 +382,22 @@ export default function CreateListing() {
               />
               <span className='text-lg'>For Students</span>
             </div>
+            {formData.forStudents && (
+              <div className='flex items-center gap-2'>
+                <select
+                  id='hostelType'
+                  className='p-3 border border-gray-300 rounded-lg'
+                  onChange={handleChange}
+                  value={formData.hostelType}
+                  required={formData.forStudents}
+                >
+                  <option value=''>Select Hostel Type</option>
+                  <option value='girls'>Girls Hostel</option>
+                  <option value='boys'>Boys Hostel</option>
+                  <option value='co'>Co-ed Hostel</option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
         <div className='flex flex-col flex-1 gap-4'>

@@ -12,6 +12,7 @@ import {
   FaParking,
   FaShare,
   FaGraduationCap,
+  FaUserFriends,
 } from 'react-icons/fa';
 import Contact from '../components/Contact';
 import DatePicker from 'react-datepicker';
@@ -235,6 +236,11 @@ export default function Listing() {
                   ₹{+listing.regularPrice - +listing.discountPrice} OFF
                 </p>
               )}
+              {listing.forStudents && (
+                <p className='bg-blue-900 w-full max-w-[200px] text-white text-center p-1 rounded-md'>
+                  Student Housing
+                </p>
+              )}
             </div>
             <p className='text-slate-800'>
               <span className='font-semibold text-black'>Description - </span>
@@ -261,10 +267,14 @@ export default function Listing() {
                 <FaChair className='text-lg' />
                 {listing.furnished ? 'Furnished' : 'Unfurnished'}
               </li>
-              <li className='flex items-center gap-1 whitespace-nowrap'>
-                <FaGraduationCap className='text-lg' />
-                {listing.forStudents ? 'Student Friendly' : 'Not For Students'}
-              </li>
+              {listing.forStudents && (
+                <li className='flex items-center gap-1 whitespace-nowrap'>
+                  <FaUserFriends className='text-lg' />
+                  {listing.hostelType === 'girls' && 'Girls Hostel'}
+                  {listing.hostelType === 'boys' && 'Boys Hostel'}
+                  {listing.hostelType === 'co' && 'Co-ed Hostel'}
+                </li>
+              )}
             </ul>
             {currentUser && listing.userRef !== currentUser._id && (
               <>

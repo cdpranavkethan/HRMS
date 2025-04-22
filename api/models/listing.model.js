@@ -63,6 +63,19 @@ const listingSchema = new mongoose.Schema(
       required: true,
       default: false,
     },
+    hostelType: {
+      type: String,
+      enum: ['girls', 'boys', 'co'],
+      required: function() {
+        return this.forStudents;
+      },
+      validate: {
+        validator: function(v) {
+          return !this.forStudents || (v && ['girls', 'boys', 'co'].includes(v));
+        },
+        message: 'Hostel type is required when listing is marked for students'
+      }
+    },
   },
   { timestamps: true }
 );

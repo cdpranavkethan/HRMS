@@ -44,7 +44,7 @@ export default function Hostels() {
           All listings here are specifically marked as student-friendly accommodations.
         </div>
         <Link
-          to={'/search?forStudents=true'}
+          to={'/hostel-search'}
           className='text-xs sm:text-sm text-blue-800 font-bold hover:underline'
         >
           Browse all student hostels...

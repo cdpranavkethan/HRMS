@@ -12,6 +12,8 @@ import Listing from './pages/Listing';
 import Search from './pages/Search';
 import Hostels from './pages/Hostels';
 
+import HostelSearch from './pages/HostelSearch';
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -23,6 +25,8 @@ export default function App() {
         <Route path='/sign-up' element={<SignUp />} />
         <Route path='/about' element={<About />} />
         <Route path='/search' element={<Search />} />
+        <Route path='/hostel-search' element={<HostelSearch />} />
+        
         <Route path='/listing/:listingId' element={<Listing />} />
 
         <Route element={<PrivateRoute />}>
